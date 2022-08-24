@@ -214,7 +214,6 @@ unsigned char option()
 
 void init()
 {
-	// unsigned char cod;
 	int fid = -1;
 
 	fid = openSerial();
