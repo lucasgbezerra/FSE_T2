@@ -14,6 +14,9 @@
 #define SEND_FLOAT 0xB2
 #define SEND_CHAR 0xB3
 
+static const unsigned char matricula[] = {5, 7, 7, 0};
+unsigned char codigo;
+
 void unzipMessage(int fid);
 void requestData(int fid, unsigned char cod);
 void show(unsigned char *buffer);

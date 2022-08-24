@@ -7,8 +7,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-static const unsigned char matricula[] = {5, 7, 7, 0};
-unsigned char codigo;
+
 void unzipMessage(int fid)
 {
 	unsigned char *rx_buffer;
@@ -70,11 +69,114 @@ void requestData(int fid, unsigned char cod)
 	idx += sizeof(matricula);
 
 	crc = calcula_CRC(buffer, idx);
+	// printf("CRC: %d\n", crc);
 	memcpy(&buffer[idx], &crc, sizeof(short));
 	idx += sizeof(short);
 
 	writeSerial(fid, buffer, idx);
 	free(buffer);
+}
+
+void sendData(int fid, unsigned char cod){
+	printf("Digite o dado: ");
+	if (cod == SEND_INT){
+		int numInt = 0;
+		scanf("%d", &numInt);
+		buildIntPackage(fid, numInt);
+	}
+	if (cod == SEND_FLOAT){
+		float numFloat = 0;
+		scanf("%f", &numFloat);
+		buildFloatPackage(fid, numFloat);
+	}
+	if (cod == SEND_CHAR){
+		char str[255];
+		scanf(" %[^\n]s", str);
+		buildStringPackage(fid, str);
+	}
+
+
+}
+
+void buildIntPackage(int fid, int dado)
+{
+	int idx = 0;
+	unsigned char *buffer = malloc(13);
+
+	buffer[idx++] = ADRRESS;
+	buffer[idx++] = SEND;
+	buffer[idx++] = SEND_INT;
+	memcpy(&buffer[idx], &dado, sizeof(dado));
+	idx += sizeof(dado);
+	// memcpy(&buffer[idx], matricula, sizeof(matricula));
+	// idx += sizeof(matricula);
+	
+	short crc = calcula_CRC(buffer, idx);
+
+	memcpy(&buffer[idx], &crc, sizeof(short));
+	idx += sizeof(short);
+	printf("Idx: %d CRC %u\n", idx, crc);
+	for (int i = 0; i < idx; i++)
+		printf("%2x ", buffer[i]);
+	printf("\n");
+	writeSerial(fid, buffer, idx);
+	free(buffer);
+}
+
+
+void buildFloatPackage(int fid, float dado)
+{
+	int idx = 0;
+	unsigned char *buffer = malloc(13);
+
+	buffer[idx++] = ADRRESS;
+	buffer[idx++] = SEND;
+	buffer[idx++] = SEND_FLOAT;
+	memcpy(&buffer[idx], &dado, sizeof(dado));
+	idx += sizeof(dado);
+	// memcpy(&buffer[idx], matricula, sizeof(matricula));
+	// idx += sizeof(matricula);
+
+	short crc = calcula_CRC(buffer, idx);
+
+	memcpy(&buffer[idx], &crc, sizeof(short));
+	idx += sizeof(short);
+	
+	writeSerial(fid, buffer, idx);
+	free(buffer);
+
+}
+
+void buildStringPackage(int fid, char *dado)
+{
+	int idx = 0;
+	unsigned char *buffer;
+	
+	int sizeDado = strlen(dado)+1;
+	buffer = malloc((4 + sizeDado + sizeof(short)));
+	// Contruindo mensagem
+	buffer[idx++] = ADRRESS;
+	buffer[idx++] = SEND;
+	buffer[idx++] = SEND_CHAR;
+	buffer[idx++] = sizeDado;
+	memcpy(&buffer[idx], dado, sizeDado);
+	idx += sizeDado;
+	// memcpy(&buffer[idx], matricula, sizeof(matricula));
+	// idx += sizeof(matricula);
+
+	short crc = calcula_CRC(buffer, idx);
+
+	memcpy(&buffer[idx], &crc, sizeof(short));
+	idx += sizeof(short);
+
+	// printf("%s\n", buffer);
+	for (int i = 0; i < idx; i++)
+		printf("%2x ", buffer[i]);
+	printf("\n");
+
+	writeSerial(fid, buffer, idx);
+	free(buffer);
+
 }
 
 unsigned char option()
@@ -118,7 +220,10 @@ void init()
 	fid = openSerial();
 	codigo = option();
 
-	requestData(fid, codigo);
+	if (codigo >= SEND_INT)
+		sendData(fid, codigo);
+	else 
+		requestData(fid, codigo);
 	if (fid != -1)
 	{
 		sleep(1);
@@ -126,4 +231,3 @@ void init()
 		close(fid);
 	}
 }
-
