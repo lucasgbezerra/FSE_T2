@@ -1,2 +1,6 @@
-# Ignore docs
+# Docs
 anotacoes.md
+
+# Folders
+bin/**
+obj/**
