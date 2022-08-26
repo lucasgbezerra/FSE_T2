@@ -3,28 +3,34 @@
 #include <fcntl.h>
 #include <termios.h>
 
-void writeSerial(int fid, unsigned char *tx_buffer, int size)
+#include "uart.h"
+
+int fid = -1;
+
+void write_serial(unsigned char *tx_buffer, int size)
 {
     if (fid != -1)
         write(fid, tx_buffer, size);
 }
 
-int readSerial(int fid, unsigned char *rx_buffer, int size_buffer)
+int read_serial(unsigned char *rx_buffer, int size_buffer)
 {
-    if (fid == -1)
+    if (fid == -1){
+        printf("FID -1\n");
         return -1;
+    }
     int size = read(fid, rx_buffer, size_buffer);
+
     return size;
 }
-int openSerial()
+void open_serial()
 {
-    int fid = -1;
     fid = open("/dev/serial0", O_RDWR | O_NOCTTY | O_NDELAY);
 
     if (fid == -1)
     {
         printf("Erro - Não foi possível iniciar a UART.\n");
-        return -1;
+        // return -1;
     }
 
     printf("UART inicializada!\n");
@@ -38,5 +44,10 @@ int openSerial()
     tcflush(fid, TCIFLUSH);
     tcsetattr(fid, TCSANOW, &options);
 
-    return fid;
+    // return fid;
+}
+
+void close_serial(){
+    fid = -1;
+    close(fid);
 }
