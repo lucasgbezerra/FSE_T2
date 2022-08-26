@@ -2,25 +2,27 @@
 #define MODBUS_H_
 
 // Códigos do protocolo de comunicação
-#define ADRRESS 0X01
+#define ENDERECO 0X01
 
-#define REQUEST 0X23
-#define SEND 0x16
+#define SOLICITA 0X23
+#define ENVIA 0x16
 
-#define REQUEST_INT 0xA1
-#define REQUEST_FLOAT 0xA2
-#define REQUEST_CHAR 0xA3
-#define SEND_INT 0xB1
-#define SEND_FLOAT 0xB2
-#define SEND_CHAR 0xB3
-
+#define LIGA 0x01
+#define DESLIGA 0x02
+#define INICIA 0x03
+#define CANCELA 0x04
+#define TEMPO_MAIS 0x06
+#define TEMPO_MENOS 0x07
+#define SOLICITA_TEMP_INT 0xC1
+#define SOLICITA_TEMP_REF 0xC2
+#define LE_COMANDO 0xC3
+#define ENVIA_SINAL_CONTROLE 0xD1
+#define ENVIA_SINAL_REF 0xD2
+#define ENVIA_ESTADO 0xD3
+#define MODO_CONTROLE 0xD4
 static const unsigned char matricula[] = {5, 7, 7, 0};
-unsigned char codigo;
 
-void unzipMessage(int fid);
-void requestData(int fid, unsigned char cod);
-void show(unsigned char *buffer);
-unsigned char option();
-void init();
+void le_mensagem();
+void escreve_mensagem(unsigned char *mensagem, unsigned char tam_mensagem, unsigned char codigo, unsigned char sub_codigo);
 
 #endif
