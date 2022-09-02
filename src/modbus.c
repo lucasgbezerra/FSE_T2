@@ -17,22 +17,24 @@ int build_mensage(unsigned char *buffer, unsigned char code, unsigned char sub_c
 	buffer[idx++] = ENDERECO;
 	buffer[idx++] = code;
 	buffer[idx++] = sub_code;
+	
+	
 	memcpy(&buffer[idx], matricula, sizeof(matricula));
 	idx += sizeof(matricula);
 	if (data != NULL)
 	{
-		if (sub_code == ENVIA_SINAL_CONTROLE || sub_code == ENVIA_TEMPORIZADOR)
-		{
-			printf("%d\n", (*(int *)data));
-		}
-		else if (sub_code == ENVIA_SINAL_REF)
-		{
-			printf("%.2f\n", *((float *)data));
-		}
-		else
-		{
-			printf("%c\n", (*(char *)data));
-		}
+		// if (sub_code == ENVIA_SINAL_CONTROLE || sub_code == ENVIA_TEMPORIZADOR)
+		// {
+		// 	printf("%d\n", (*(int *)data));
+		// }
+		// else if (sub_code == ENVIA_SINAL_REF)
+		// {
+		// 	printf("%.2f\n", *((float *)data));
+		// }
+		// else
+		// {
+		// 	printf("%c\n", (*(char *)data));
+		// }
 		memcpy(&buffer[idx], data, size_data);
 		idx += size_data;
 	}
@@ -48,7 +50,6 @@ void write_mensage(unsigned char sub_code, void *data)
 {
 	int size = 0;
 	unsigned char *buffer = malloc(13);
-
 	// if (sub_code == SOLICITA_TEMP_INT)
 	// {
 	// 	size = build_mensage(buffer, SOLICITA, sub_code, NULL, 0);
@@ -62,10 +63,10 @@ void write_mensage(unsigned char sub_code, void *data)
 		size = build_mensage(buffer, ENVIA, sub_code, data, BYTE);
 	}
 
-	printf("Escreve Mensagem: \n");
-	for (int i = 0; i < size; i++)
-		printf("%2x ", buffer[i]);
-	printf("\n");
+	// printf("Escreve Mensagem: \n");
+	// for (int i = 0; i < size; i++)
+	// 	printf("%2x ", buffer[i]);
+	// printf("\n");
 
 	write_serial(buffer, size);
 	free(buffer);
@@ -90,12 +91,12 @@ int read_mensage(unsigned char sub_code, void *data)
 	short crc = calcula_CRC(rx_buffer, length);
 	;
 
-	printf("Lê Mensagem: \n");
-	for (int i = 0; i < 9; i++)
-		printf("%2x ", rx_buffer[i]);
-	printf("\n");
+	// printf("Lê Mensagem: \n");
+	// for (int i = 0; i < 9; i++)
+	// 	printf("%2x ", rx_buffer[i]);
+	// printf("\n");
 
-	if (crc_recv == crc)
+	if (crc_recv == crc && sub_code == rx_buffer[2])
 	{
 		memcpy(data, &rx_buffer[3], 4 * BYTE);
 		free(rx_buffer);
@@ -106,6 +107,6 @@ int read_mensage(unsigned char sub_code, void *data)
 	{
 		free(rx_buffer);
 		free(tx_buffer);
-		return -1;
+		return FAIL;
 	}
 }
