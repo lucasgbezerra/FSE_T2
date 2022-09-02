@@ -24,5 +24,5 @@ void lcd_go_to_loc(int line);
 void clear_lcd(void);
 void lcd_type_ln(const char *s);
 void lcd_type_char(char val);
-
+void write_lcd(char *first_line, char *second_line);
 #endif

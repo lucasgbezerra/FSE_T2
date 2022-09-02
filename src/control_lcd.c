@@ -88,3 +88,12 @@ int lcd_init()
 
     return fd;
 }
+
+void write_lcd(char *first_line, char *second_line)
+{
+    clear_lcd();
+    lcd_go_to_loc(LINE1);
+    lcd_type_ln(first_line);
+    lcd_go_to_loc(LINE2);
+    lcd_type_ln(second_line);
+}
