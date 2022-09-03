@@ -1,9 +1,9 @@
 #include <stdio.h>
-#include <time.h>
 #include <softPwm.h>
 #include <wiringPi.h>
 #include <pthread.h>
 #include <signal.h>
+#include <sys/time.h>
 
 #include "modbus.h"
 #include "controller.h"
@@ -12,6 +12,7 @@
 #include "uart.h"
 #include "pid.h"
 #include "utils.h"
+#include "csv_file.h"
 
 // #define TRUE (1 == 1)
 // #define FALSE (!TRUE)
@@ -19,6 +20,7 @@
 // Temperaturas
 float ref_temperature = 0;
 float internal_temperature = 0;
+int signal_temp = 0;
 
 int is_running = TRUE;
 int is_on = FALSE;
@@ -26,6 +28,13 @@ int is_start = FALSE;
 int init_countdown = FALSE;
 int preheat = FALSE;
 int timer = 0;
+
+struct st_menu
+{
+    int options[4];
+    int current;
+};
+
 
 pthread_t thread_timer;
 
@@ -62,21 +71,17 @@ void read_commands()
 
 void request_temperatures()
 {
-
-    // clear_buffer();
     if (read_mensage(SOLICITA_TEMP_INT, &internal_temperature) == FAIL)
     {
-        printf("Falhou INT\n");
+        printf("Erro: falha na leitura da Temperatura Interna\n");
         stop();
     }
-    // printf("INT temp: %.2f\n", internal_temperature);
 
     if (read_mensage(SOLICITA_TEMP_REF, &ref_temperature) == FAIL)
     {
-        printf("Falhou REF\n");
+        printf("Erro: falha na leitura da Temperatura de Referência\n");
         stop();
     }
-    // printf("REF temp: %.2f\n", ref_temperature);
 }
 void turn_off()
 {
@@ -85,8 +90,7 @@ void turn_off()
     is_on = FALSE;
     is_start = FALSE;
     init_countdown = FALSE;
-    printf("Envia Estado\n");
-    write_lcd("RESFRIANDO", "SISTEMA");
+
     cool_down(get_temperature());
     write_mensage(ENVIA_ESTADO_SISTEMA, &data);
     stop();
@@ -143,7 +147,12 @@ void command_handle(int command)
             printf("Timer %d\n", timer);
             write_mensage(ENVIA_TEMPORIZADOR, &timer);
             break;
+        case MENU:
+            if(is_start)
+                break;
+            printf("Menu\n");
 
+            break;
         default:
             break;
         }
@@ -157,24 +166,23 @@ void init()
     init_bme280();
     pid_configura_constantes(KP, KI, KD);
     setup_gpio();
-    // clear_buffer(); // 500 ms
+    create_file("data.csv");
 }
 
 void cool_down(int room_temperature)
 {
     if (is_on)
-    {
         return;
-    }
+
+    char first_line[17];
     is_start = TRUE;
     while (!compare_temperature(internal_temperature, room_temperature))
     {
-        // request_temperatures();
         temperature_controller(FALSE);
+        sprintf(first_line, "TI:%.2f TA:%.1f", internal_temperature, get_temperature());
+        write_lcd(first_line, "RESFRIANDO");
     }
-
     is_start = FALSE;
-    printf("TEMPERATURA ALCANÇADA");
 }
 
 void finish_pwm()
@@ -192,7 +200,6 @@ void stop()
     finish_pwm();
     close_serial();
     clear_lcd();
-    printf("\n Finalizando programa... \n");
     exit(0);
 }
 
@@ -261,14 +268,14 @@ void temperature_controller(int is_heating)
     {
         if (signal_temperature >= FAN_LIMIT)
         {
-            signal_temperature = -1 * FAN_LIMIT;
+            signal_temperature = FAN_LIMIT;
         }
-        softPwmWrite(FAN_PIN, signal_temperature);
+        softPwmWrite(FAN_PIN, -signal_temperature);
         softPwmWrite(RESISTOR_PIN, 0);
     }
-    int signal = (int)signal_temperature;
+    signal_temp = (int)signal_temperature;
     printf("SIGNAL: %.2lf\n", signal_temperature);
-    write_mensage(ENVIA_SINAL_CONTROLE, &signal);
+    write_mensage(ENVIA_SINAL_CONTROLE, &signal_temp);
 }
 
 void setup_gpio()
@@ -283,19 +290,17 @@ void setup_gpio()
 void timer_controller()
 {
     int seconds = 0;
+    struct timeval start;
+    struct timeval end;
     while (is_on)
     {
+        gettimeofday(&start, NULL);
         if (internal_temperature != 0)
             show_lcd(timer * 60 - seconds);
         if (init_countdown)
         {
             printf("Tempo: %d\n", timer);
             seconds++;
-        }
-        if (seconds == 60)
-        {
-            seconds = 0;
-            timer--;
         }
         if (timer <= 0)
         {
@@ -304,7 +309,14 @@ void timer_controller()
             init_countdown = FALSE;
             is_start = FALSE;
         }
-        usleep(850000);
+        if (seconds == 60)
+        {
+            seconds = 0;
+            timer--;
+        }
+        save_on_file("data.csv", internal_temperature, ref_temperature, (float)get_temperature(), signal_temp);
+        gettimeofday(&end, NULL);
+        usleep(1000000 - (end.tv_usec - start.tv_usec));
     }
 }
 
@@ -319,6 +331,6 @@ void sigintHandler(int sig_num)
     // signal(SIGINT, sigintHandler);
     pthread_kill(thread_timer, SIGUSR1);
     stop();
-    // printf("KILL: %d\n", sig_num);
+    printf("KILL: %d\n", sig_num);
     exit(0);
 }

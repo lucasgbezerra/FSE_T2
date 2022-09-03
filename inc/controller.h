@@ -8,6 +8,7 @@
 #define CANCELA 0x04
 #define TEMPO_MAIS 0x05
 #define TEMPO_MENOS 0x06
+#define MENU 0x07
 
 #define DESLIGADO 0X00
 #define LIGADO 0X01
@@ -21,6 +22,11 @@
 #define RESISTOR_PIN 4
 #define FAN_PIN 5
 #define FAN_LIMIT -40
+
+#define NORMAL 0
+#define BATATA 1
+#define PAO_QUEIJO 2
+#define CARNE 3
 
 void main_controller();
 void read_commands();
