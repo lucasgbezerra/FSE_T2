@@ -17,8 +17,7 @@ int build_mensage(unsigned char *buffer, unsigned char code, unsigned char sub_c
 	buffer[idx++] = ENDERECO;
 	buffer[idx++] = code;
 	buffer[idx++] = sub_code;
-	
-	
+
 	memcpy(&buffer[idx], matricula, sizeof(matricula));
 	idx += sizeof(matricula);
 	if (data != NULL)
@@ -69,6 +68,11 @@ void write_mensage(unsigned char sub_code, void *data)
 	// printf("\n");
 
 	write_serial(buffer, size);
+	usleep(500000); // 600 ms
+	if (sub_code != ENVIA_SINAL_CONTROLE && sub_code != ENVIA_SINAL_REF){
+		unsigned char rx_buffer[9];
+		read_serial(rx_buffer, size);
+	}
 	free(buffer);
 }
 
@@ -77,36 +81,50 @@ int read_mensage(unsigned char sub_code, void *data)
 	int rx_length = 0;
 	int tx_length = 0;
 	int size = 9;
+	int error = 0;
 	short crc_recv;
-	unsigned char *rx_buffer = malloc(size);
-	unsigned char *tx_buffer = malloc(13);
+	unsigned char rx_buffer[9];
+	unsigned char tx_buffer[13];
 
 	tx_length = build_mensage(tx_buffer, SOLICITA, sub_code, NULL, 0);
-	write_serial(tx_buffer, tx_length);
-	usleep(500000);
 
-	rx_length = read_serial(rx_buffer, size);
-	int length = rx_length - sizeof(short);
-	memcpy(&crc_recv, &rx_buffer[length], sizeof(short));
-	short crc = calcula_CRC(rx_buffer, length);
-	;
-
-	// printf("Lê Mensagem: \n");
-	// for (int i = 0; i < 9; i++)
-	// 	printf("%2x ", rx_buffer[i]);
-	// printf("\n");
-
-	if (crc_recv == crc && sub_code == rx_buffer[2])
+	// if (sub_code == SOLICITA_TEMP_INT)
+	// {
+	// 	printf("Mensagem enviada: \n");
+	// 	for (int i = 0; i < 9; i++)
+	// 		printf("%2x ", tx_buffer[i]);
+	// 	printf("\n");
+	// }
+	while (error < 3)
 	{
-		memcpy(data, &rx_buffer[3], 4 * BYTE);
-		free(rx_buffer);
-		free(tx_buffer);
-		return rx_length;
+		write_serial(tx_buffer, tx_length);
+		usleep(600000); // 600 ms
+
+		rx_length = read_serial(rx_buffer, size);
+		int length = rx_length - sizeof(short);
+
+		memcpy(&crc_recv, &rx_buffer[length], sizeof(short));
+		short crc = calcula_CRC(rx_buffer, length);
+
+		// if (sub_code == SOLICITA_TEMP_INT)
+		// {
+		// 	printf("Lê Mensagem: \n");
+		// 	for (int i = 0; i < 9; i++)
+		// 		printf("%2x ", rx_buffer[i]);
+		// 	printf("\n");
+		// }
+		if (crc_recv == crc && sub_code == rx_buffer[2])
+		{
+			memcpy(data, &rx_buffer[3], 4 * BYTE);
+			break;
+		}
+		else
+		{
+			printf("ERROR: %d\n", error);
+			error++;
+			rx_length = -1;
+		}
 	}
-	else
-	{
-		free(rx_buffer);
-		free(tx_buffer);
-		return FAIL;
-	}
+	
+	return rx_length;
 }
