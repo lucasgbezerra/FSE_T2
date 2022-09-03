@@ -13,9 +13,8 @@
 #include "pid.h"
 #include "utils.h"
 #include "csv_file.h"
+#include "menu_controller.h"
 
-// #define TRUE (1 == 1)
-// #define FALSE (!TRUE)
 
 // Temperaturas
 float ref_temperature = 0;
@@ -29,13 +28,7 @@ int init_countdown = FALSE;
 int preheat = FALSE;
 int timer = 0;
 
-struct st_menu
-{
-    int options[4];
-    int current;
-};
-
-
+st_menu menu;
 pthread_t thread_timer;
 
 void main_controller()
@@ -46,11 +39,8 @@ void main_controller()
         read_commands(); // 600 ms
         if (is_on)
         {
-            // request_temperatures(); // 1,2s
-            // show_lcd();
-            // timer_controller();
+            request_temperatures();
             temperature_controller(TRUE);
-            // printf("is on\n");
         }
     }
     pthread_join(thread_timer, (void **)&(ptr));
@@ -64,7 +54,7 @@ void read_commands()
     int error = read_mensage(LE_COMANDO, &command);
     if (error != FAIL && command != 0)
     {
-        printf("Comando: %d\n", command);
+        // printf("Comando: %d\n", command);
         command_handle(command);
     }
 }
@@ -102,13 +92,13 @@ void command_handle(int command)
 
     if (command == LIGA && !is_on)
     {
+        printf("Ligando...");
         data = LIGADO;
         is_on = TRUE;
         timer = 0;
         write_mensage(ENVIA_TEMPORIZADOR, &timer);
-        printf("Envia tempo\n");
         write_mensage(ENVIA_ESTADO_SISTEMA, &data);
-        printf("Envia Estado\n");
+        printf("OK\n");
         pthread_create(&(thread_timer), NULL, timer_controller, NULL);
     }
     else if (command == DESLIGA)
@@ -120,38 +110,45 @@ void command_handle(int command)
         switch (command)
         {
         case INICIA:
+            printf("Iniciando...");
             data = FUNCIONANDO;
             is_start = TRUE;
             preheat = TRUE;
-            printf("Inicia\n");
             write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
+            printf("OK\n");
             break;
 
         case CANCELA:
+            printf("Cancelando...");
             data = PARADO;
             is_start = FALSE;
             init_countdown = FALSE;
             preheat = FALSE;
-            printf("Cancela\n");
             write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
+            printf("OK\n");
             break;
 
         case TEMPO_MAIS:
             timer++;
-            printf("Timer %d\n", timer);
             write_mensage(ENVIA_TEMPORIZADOR, &timer);
+            printf("Tempo: %d\n", timer);
             break;
 
         case TEMPO_MENOS:
             timer--;
-            printf("Timer %d\n", timer);
             write_mensage(ENVIA_TEMPORIZADOR, &timer);
+            printf("Tempo: %d\n", timer);
             break;
         case MENU:
-            if(is_start)
+            if (is_start)
                 break;
-            printf("Menu\n");
-
+            int idx = menu_controller(&menu);
+            ref_temperature = menu.temperatures[idx];
+            timer = menu.times[idx];
+            
+            write_mensage(ENVIA_SINAL_REF, &ref_temperature);
+            write_mensage(ENVIA_TEMPORIZADOR, &timer);
+            printf("Opção: %s\n", menu.options[menu.current]);
             break;
         default:
             break;
@@ -167,6 +164,7 @@ void init()
     pid_configura_constantes(KP, KI, KD);
     setup_gpio();
     create_file("data.csv");
+    menu_init(&menu);
 }
 
 void cool_down(int room_temperature)
@@ -174,13 +172,21 @@ void cool_down(int room_temperature)
     if (is_on)
         return;
 
-    char first_line[17];
+    char first_line[16];
+    char second_line[16];
+
     is_start = TRUE;
     while (!compare_temperature(internal_temperature, room_temperature))
     {
+        if (internal_temperature < room_temperature){
+            is_start = FALSE;
+            break;
+        }
+        request_temperatures();
         temperature_controller(FALSE);
         sprintf(first_line, "TI:%.2f TA:%.1f", internal_temperature, get_temperature());
-        write_lcd(first_line, "RESFRIANDO");
+        sprintf(second_line, "RESFRIANDO");
+        write_lcd(first_line, second_line);
     }
     is_start = FALSE;
 }
@@ -194,12 +200,13 @@ void finish_pwm()
 }
 void stop()
 {
+    printf("\nFinalizando programa...");
     shutdown_lcd();
-    printf("\n Finalizando programa... \n");
     close_bme280();
     finish_pwm();
     close_serial();
     clear_lcd();
+    printf("OK\n");
     exit(0);
 }
 
@@ -240,7 +247,7 @@ void temperature_controller(int is_heating)
     if (!is_start)
         return;
 
-    request_temperatures();
+    // request_temperatures();
     if (is_heating)
     {
         if (preheat && compare_temperature(internal_temperature, ref_temperature))
@@ -299,7 +306,7 @@ void timer_controller()
             show_lcd(timer * 60 - seconds);
         if (init_countdown)
         {
-            printf("Tempo: %d\n", timer);
+            // printf("Tempo: %d\n", timer);
             seconds++;
         }
         if (timer <= 0)
