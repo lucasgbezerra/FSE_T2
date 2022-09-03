@@ -1,3 +1,6 @@
+#ifndef CONTROLLER_H_
+#define CONTROLLER_H_
+
 // Comandos
 #define LIGA 0x01
 #define DESLIGA 0x02
@@ -21,7 +24,6 @@
 
 void main_controller();
 void read_commands();
-void turn_on();
 void turn_off();
 void command_handle(int command);
 void request_temperatures();
@@ -29,8 +31,14 @@ void init();
 void show_lcd();
 void stop();
 void shutdown_lcd();
-void temperature_controller();
+void temperature_controller(int is_heating);
 void compare_tr_ti();
 int round_temperature(double number);
 void setup_gpio();
 void timer_controller();
+void sigintHandler(int sig_num);
+void exit_thread();
+void finish_pwm();
+void cool_down(int room_temperature);
+
+#endif
