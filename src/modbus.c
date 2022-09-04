@@ -68,7 +68,7 @@ void write_mensage(unsigned char sub_code, void *data)
 	// printf("\n");
 
 	write_serial(buffer, size);
-	usleep(500000); // 600 ms
+	usleep(600000); // 600 ms
 	if (sub_code != ENVIA_SINAL_CONTROLE && sub_code != ENVIA_SINAL_REF){
 		unsigned char rx_buffer[9];
 		read_serial(rx_buffer, size);
