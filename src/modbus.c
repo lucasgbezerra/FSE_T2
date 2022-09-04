@@ -128,3 +128,9 @@ int read_mensage(unsigned char sub_code, void *data)
 	
 	return rx_length;
 }
+void open_modbus(){
+	open_serial();
+}
+void close_modbus(){
+	close_serial();
+}

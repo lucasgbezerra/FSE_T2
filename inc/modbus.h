@@ -23,5 +23,6 @@ static const unsigned char matricula[] = {5, 7, 7, 0};
 int read_mensage(unsigned char sub_code, void *data);
 int build_mensage(unsigned char *buffer, unsigned char code, unsigned char sub_code, void *data, int size_data);
 void write_mensage(unsigned char sub_code, void *data);
-
+void close_modbus();
+void open_modbus();
 #endif

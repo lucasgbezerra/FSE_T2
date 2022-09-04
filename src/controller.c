@@ -9,12 +9,10 @@
 #include "controller.h"
 #include "control_lcd.h"
 #include "bme280_controller.h"
-#include "uart.h"
 #include "pid.h"
 #include "utils.h"
 #include "csv_file.h"
 #include "menu_controller.h"
-
 
 // Temperaturas
 float ref_temperature = 0;
@@ -26,6 +24,7 @@ int is_on = FALSE;
 int is_start = FALSE;
 int init_countdown = FALSE;
 int preheat = FALSE;
+int is_heating;
 int timer = 0;
 
 st_menu menu;
@@ -40,11 +39,11 @@ void main_controller()
         if (is_on)
         {
             request_temperatures();
-            temperature_controller(TRUE);
+            temperature_controller();
         }
     }
     pthread_join(thread_timer, (void **)&(ptr));
-    printf("saiu do loop\n");
+    // printf("saiu do loop\n");
 }
 
 void read_commands()
@@ -73,18 +72,6 @@ void request_temperatures()
         stop();
     }
 }
-void turn_off()
-{
-    unsigned char data = DESLIGADO;
-    is_running = FALSE;
-    is_on = FALSE;
-    is_start = FALSE;
-    init_countdown = FALSE;
-
-    cool_down(get_temperature());
-    write_mensage(ENVIA_ESTADO_SISTEMA, &data);
-    stop();
-}
 
 void command_handle(int command)
 {
@@ -99,11 +86,19 @@ void command_handle(int command)
         write_mensage(ENVIA_TEMPORIZADOR, &timer);
         write_mensage(ENVIA_ESTADO_SISTEMA, &data);
         printf("OK\n");
-        pthread_create(&(thread_timer), NULL, timer_controller, NULL);
+        pthread_create(&(thread_timer), NULL, (void *)timer_controller, NULL);
     }
     else if (command == DESLIGA)
     {
-        turn_off();
+        data = DESLIGADO;
+        is_running = FALSE;
+        is_on = FALSE;
+        is_start = FALSE;
+        init_countdown = FALSE;
+
+        cool_down(get_temperature());
+        write_mensage(ENVIA_ESTADO_SISTEMA, &data);
+        stop();
     }
     else if (is_on)
     {
@@ -114,6 +109,7 @@ void command_handle(int command)
             data = FUNCIONANDO;
             is_start = TRUE;
             preheat = TRUE;
+            is_heating = TRUE;
             write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
             printf("OK\n");
             break;
@@ -145,7 +141,7 @@ void command_handle(int command)
             int idx = menu_controller(&menu);
             ref_temperature = menu.temperatures[idx];
             timer = menu.times[idx];
-            
+
             write_mensage(ENVIA_SINAL_REF, &ref_temperature);
             write_mensage(ENVIA_TEMPORIZADOR, &timer);
             printf("Opção: %s\n", menu.options[menu.current]);
@@ -157,7 +153,7 @@ void command_handle(int command)
 }
 void init()
 {
-    open_serial();
+    open_modbus();
     lcd_init();
     write_lcd("INICIALIZANDO", "SISTEMA");
     init_bme280();
@@ -169,26 +165,26 @@ void init()
 
 void cool_down(int room_temperature)
 {
-    if (is_on)
-        return;
 
     char first_line[16];
     char second_line[16];
 
     is_start = TRUE;
+    is_heating = FALSE;
     while (!compare_temperature(internal_temperature, room_temperature))
     {
-        if (internal_temperature < room_temperature){
+        if (internal_temperature < room_temperature)
+        {
             is_start = FALSE;
             break;
         }
         request_temperatures();
-        temperature_controller(FALSE);
-        sprintf(first_line, "TI:%.2f TA:%.1f", internal_temperature, get_temperature());
-        sprintf(second_line, "RESFRIANDO");
-        write_lcd(first_line, second_line);
+        temperature_controller();
+
     }
     is_start = FALSE;
+    unsigned char data = PARADO;
+    write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
 }
 
 void finish_pwm()
@@ -200,35 +196,37 @@ void finish_pwm()
 }
 void stop()
 {
+
     printf("\nFinalizando programa...");
     shutdown_lcd();
     close_bme280();
     finish_pwm();
-    close_serial();
-    clear_lcd();
+    close_modbus();
     printf("OK\n");
+    clear_lcd();
     exit(0);
 }
 
-void show_lcd(int time)
+void show_lcd(int time_sec)
 {
     char first_line[17];
     char second_line[17];
-    int minutes;
-    int seconds;
 
-    minutes = time / 60;
-    seconds = time % 60;
+    int minutes = (timer * 60 - time_sec) / 60;
+    int seconds = (timer * 60 - time_sec) % 60;
 
-    sprintf(first_line, "TI:%.2f TR:%.1f", internal_temperature, ref_temperature);
-
+    if (is_heating || preheat)
+    {
+        sprintf(first_line, "TI:%.2f TR:%.1f", internal_temperature, ref_temperature);
+        sprintf(second_line, "TIME: %dm %ds", minutes, seconds);
+    }else{
+        sprintf(first_line, "TI:%.2f TA:%.1f", internal_temperature, get_temperature());
+        sprintf(second_line, "RESFRIANDO");
+    }
     if (preheat)
     {
+        sprintf(first_line, "TI:%.2f TR:%.1f", internal_temperature, ref_temperature);
         sprintf(second_line, "PRE-AQUECENDO");
-    }
-    else
-    {
-        sprintf(second_line, "TIME: %dm %ds", minutes, seconds);
     }
 
     write_lcd(first_line, second_line);
@@ -241,13 +239,14 @@ void shutdown_lcd()
     write_lcd(first_line, second_line);
 }
 
-void temperature_controller(int is_heating)
+void temperature_controller()
 {
 
     if (!is_start)
         return;
 
     // request_temperatures();
+
     if (is_heating)
     {
         if (preheat && compare_temperature(internal_temperature, ref_temperature))
@@ -273,7 +272,7 @@ void temperature_controller(int is_heating)
     }
     else
     {
-        if (signal_temperature >= FAN_LIMIT)
+        if (signal_temperature > FAN_LIMIT)
         {
             signal_temperature = FAN_LIMIT;
         }
@@ -303,18 +302,17 @@ void timer_controller()
     {
         gettimeofday(&start, NULL);
         if (internal_temperature != 0)
-            show_lcd(timer * 60 - seconds);
+            show_lcd(seconds);
         if (init_countdown)
         {
-            // printf("Tempo: %d\n", timer);
             seconds++;
         }
-        if (timer <= 0)
+        if (timer <= 0 && init_countdown)
         {
             timer = 0;
             seconds = 0;
             init_countdown = FALSE;
-            is_start = FALSE;
+            is_heating = FALSE;
         }
         if (seconds == 60)
         {
@@ -323,18 +321,17 @@ void timer_controller()
         }
         save_on_file("data.csv", internal_temperature, ref_temperature, (float)get_temperature(), signal_temp);
         gettimeofday(&end, NULL);
-        usleep(1000000 - (end.tv_usec - start.tv_usec));
+        int t = 1000000 - (end.tv_usec - start.tv_usec);
+        printf("T: %d\n", t);
+        usleep(t);
     }
 }
-
 void exit_thread()
 {
     pthread_exit(NULL);
 }
-
 void sigintHandler(int sig_num)
 {
-
     // signal(SIGINT, sigintHandler);
     pthread_kill(thread_timer, SIGUSR1);
     stop();

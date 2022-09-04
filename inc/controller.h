@@ -37,7 +37,7 @@ void init();
 void show_lcd();
 void stop();
 void shutdown_lcd();
-void temperature_controller(int is_heating);
+void temperature_controller();
 void compare_tr_ti();
 int round_temperature(double number);
 void setup_gpio();
