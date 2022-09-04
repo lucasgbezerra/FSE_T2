@@ -58,7 +58,19 @@ As dashboards são os painéis de controle da aplicação, apartir dela é possi
 Imagem do Servidor Central no seu MENU
 - **CTRL-C**: Encerra todas as comunicações com periféricos e desligar os atuadores.
 
+### Legenda display
+- **TA**: Temperatura do Ambiente que é medida pelo sensor BME280.
+- **TI**: Temperatura Interna da Air Fryer que é medida pelo Sensor DS18B20.
+- **TR**: Temperatura de Referência definida pelo usuário.
+- **Time**: Tempo definido pelo usuário.
+
 ## Testes Realizados
 ### Teste 1
+![Teste 1 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste1_1.jpg?token=GHSAT0AAAAAABV7A53ACJ74F3XNSFSN3R7YYYVCUIA)
+![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste1_2.jpg?token=GHSAT0AAAAAABV7A53APOJEJVWQMJXYSBIGYYVCVQA)
 ### Teste 2
+![Teste 2 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste2_1.jpg?token=GHSAT0AAAAAABV7A53AUIAHGEW5KXIWLO4GYYVCV4A)
+![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste2_2.jpg?token=GHSAT0AAAAAABV7A53ANCVME2A7YZTLQPXOYYVCV3A)
 ### Teste 3
+![Teste 1 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste3_1.jpg?token=GHSAT0AAAAAABV7A53ARUWFRY262BAX5WNEYYVCWRA)
+![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste3_2.jpg?token=GHSAT0AAAAAABV7A53AQH7GCUU7NBVHNVDCYYVCWTA)
