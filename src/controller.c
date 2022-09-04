@@ -17,14 +17,15 @@
 // Temperaturas
 float ref_temperature = 0;
 float internal_temperature = 0;
-int signal_temp = 0;
+int control_signal = 0;
 
 int is_running = TRUE;
 int is_on = FALSE;
 int is_start = FALSE;
 int init_countdown = FALSE;
-int preheat = FALSE;
-int is_heating;
+int is_waiting = FALSE;
+int is_heating = FALSE;
+int is_cooling = FALSE;
 int timer = 0;
 
 st_menu menu;
@@ -92,11 +93,14 @@ void command_handle(int command)
     {
         printf("Desligando...\n");
         data = DESLIGADO;
-        is_running = FALSE;
-        is_start = FALSE;
+
         init_countdown = FALSE;
-        // is_on = FALSE;
+        is_heating = FALSE;
+        is_cooling = TRUE;
         cool_down(get_temperature());
+        is_start = FALSE;
+        is_waiting = FALSE;
+        is_running = FALSE;
         is_on = FALSE;
         write_mensage(ENVIA_ESTADO_SISTEMA, &data);
         stop();
@@ -109,18 +113,22 @@ void command_handle(int command)
             printf("Iniciando...");
             data = FUNCIONANDO;
             is_start = TRUE;
-            preheat = TRUE;
+            // preheat = TRUE;
+            is_waiting = FALSE;
             is_heating = TRUE;
             write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
             printf("OK\n");
             break;
 
         case CANCELA:
-            printf("Cancelando...");
+            printf("Parando...");
             data = PARADO;
             is_start = FALSE;
             init_countdown = FALSE;
-            preheat = FALSE;
+            // preheat = FALSE;
+            is_waiting = TRUE;
+            is_heating = FALSE;
+            is_cooling = FALSE;
             write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
             printf("OK\n");
             break;
@@ -132,7 +140,7 @@ void command_handle(int command)
             break;
 
         case TEMPO_MENOS:
-            if(timer <= 0)
+            if (timer <= 0)
                 break;
             timer--;
             write_mensage(ENVIA_TEMPORIZADOR, &timer);
@@ -166,24 +174,31 @@ void init()
     menu_init(&menu);
 }
 
-void cool_down(int room_temperature)
+void control_actuators(int fan, float resistor)
 {
+    softPwmWrite(FAN_PIN, fan);
+    softPwmWrite(RESISTOR_PIN, resistor);
+    write_mensage(ENVIA_SINAL_CONTROLE, &control_signal);
+}
 
-    signal_temp = -100;
-    while (!compare_temperature(internal_temperature, room_temperature))
+void cool_down()
+{
+    printf("Resfriando...\n");
+    float room_temperature = get_temperature();
+    while (internal_temperature > room_temperature)
     {
-        if (internal_temperature < room_temperature)
-        {
-            is_start = FALSE;
-            break;
-        }
         request_temperatures();
-        softPwmWrite(FAN_PIN, -signal_temp);
-        softPwmWrite(RESISTOR_PIN, 0);
-        write_mensage(ENVIA_SINAL_CONTROLE, &signal_temp);
+        room_temperature = get_temperature();
+
+        control_signal = -MAX_ACTUATOR;
+        control_actuators(MAX_ACTUATOR, 0);
     }
-    is_start = FALSE;
+    control_signal = 0;
+    control_actuators(0, 0);
+
     unsigned char data = PARADO;
+    is_start = FALSE;
+    is_cooling = FALSE;
     write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
     write_mensage(ENVIA_TEMPORIZADOR, &timer);
 }
@@ -215,16 +230,21 @@ void show_lcd(int time_sec)
     int minutes = (timer * 60 - time_sec) / 60;
     int seconds = (timer * 60 - time_sec) % 60;
 
-    if (preheat)
+    if (is_start && is_heating && !init_countdown)
     {
         sprintf(first_line, "TI:%.2f TR:%.1f", internal_temperature, ref_temperature);
         sprintf(second_line, "PRE-AQUECENDO");
     }
-    else if (!is_heating)
+    else if (is_cooling)
 
     {
         sprintf(first_line, "TI:%.2f TA:%.1f", internal_temperature, get_temperature());
         sprintf(second_line, "RESFRIANDO");
+    }
+    else if (is_waiting)
+    {
+        sprintf(first_line, "TI:%.2f TR:%.1f", internal_temperature, ref_temperature);
+        sprintf(second_line, "TIME: %dm %ds STOP", minutes, seconds);
     }
     else
     {
@@ -245,6 +265,13 @@ void shutdown_lcd()
 void temperature_controller()
 {
 
+    if (is_waiting && control_signal != 0)
+    {
+        control_signal = 0;
+        control_actuators(0, 0);
+        printf("AQUI\n");
+        return;
+    }
     if (!is_start)
         return;
 
@@ -256,34 +283,37 @@ void temperature_controller()
         return;
     }
 
-    if (preheat && compare_temperature(internal_temperature, ref_temperature))
+    // if (preheat && compare_temperature(internal_temperature, ref_temperature))
+    if (is_heating && !init_countdown && compare_temperature(internal_temperature, ref_temperature))
     {
         init_countdown = TRUE;
-        preheat = FALSE;
+        // preheat = FALSE;
         printf("Temperatura alcançada %.2f\n", internal_temperature);
     }
     pid_atualiza_referencia(ref_temperature);
 
     // PID
     double signal_temperature = pid_controle(internal_temperature);
+    control_signal = (int)signal_temperature;
 
     if (signal_temperature >= 0)
     {
-        softPwmWrite(RESISTOR_PIN, signal_temperature);
-        softPwmWrite(FAN_PIN, 0);
+        // softPwmWrite(RESISTOR_PIN, signal_temperature);
+        // softPwmWrite(FAN_PIN, 0);
+        control_actuators(0, signal_temperature);
     }
     else
     {
-        if (signal_temperature > FAN_LIMIT)
+        if (signal_temperature > FAN_MIN_LIMIT)
         {
-            signal_temperature = FAN_LIMIT;
+            signal_temperature = FAN_MIN_LIMIT;
         }
-        softPwmWrite(FAN_PIN, -signal_temperature);
-        softPwmWrite(RESISTOR_PIN, 0);
+        // softPwmWrite(FAN_PIN, -signal_temperature);
+        // softPwmWrite(RESISTOR_PIN, 0);
+        control_actuators(-signal_temperature, 0);
     }
-    signal_temp = (int)signal_temperature;
     printf("SIGNAL: %.2lf\n", signal_temperature);
-    write_mensage(ENVIA_SINAL_CONTROLE, &signal_temp);
+    // write_mensage(ENVIA_SINAL_CONTROLE, &control_signal);
 }
 
 void setup_gpio()
@@ -316,6 +346,7 @@ void timer_controller()
             seconds = 0;
             init_countdown = FALSE;
             is_heating = FALSE;
+            is_cooling = TRUE;
         }
         if (seconds == 60)
         {
@@ -323,9 +354,9 @@ void timer_controller()
             timer--;
         }
         gettimeofday(&end, NULL);
-        save_on_file("data.csv", internal_temperature, ref_temperature, get_temperature(), signal_temp);
+        save_on_file("data.csv", internal_temperature, ref_temperature, get_temperature(), control_signal);
         int t = 1000000 - (end.tv_usec - start.tv_usec);
-        if(t > 1000000)
+        if (t > 1000000)
             t = 830000;
         usleep(t);
     }

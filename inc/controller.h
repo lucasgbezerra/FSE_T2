@@ -21,16 +21,11 @@
 
 #define RESISTOR_PIN 4
 #define FAN_PIN 5
-#define FAN_LIMIT -40
-
-#define NORMAL 0
-#define BATATA 1
-#define PAO_QUEIJO 2
-#define CARNE 3
+#define FAN_MIN_LIMIT -40
+#define MAX_ACTUATOR 100
 
 void main_controller();
 void read_commands();
-void turn_off();
 void command_handle(int command);
 void request_temperatures();
 void init();
@@ -38,13 +33,13 @@ void show_lcd();
 void stop();
 void shutdown_lcd();
 void temperature_controller();
-void compare_tr_ti();
 int round_temperature(double number);
 void setup_gpio();
 void timer_controller();
 void sigintHandler(int sig_num);
 void exit_thread();
 void finish_pwm();
-void cool_down(int room_temperature);
+void cool_down();
+void control_actuators(int fan, float resistor);
 
 #endif
