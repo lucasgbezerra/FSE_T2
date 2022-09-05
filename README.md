@@ -66,11 +66,11 @@ Imagem do Servidor Central no seu MENU
 
 ## Testes Realizados
 ### Teste 1
-![Teste 1 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste1_1.jpg?token=GHSAT0AAAAAABV7A53ACJ74F3XNSFSN3R7YYYVCUIA)
-![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste1_2.jpg?token=GHSAT0AAAAAABV7A53APOJEJVWQMJXYSBIGYYVCVQA)
+![Teste 1 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste1_1.jpg?token=GHSAT0AAAAAABV7A53BS3VF6BHQID2CYU4OYYVNCCQ)
+![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste1_2.jpg?token=GHSAT0AAAAAABV7A53BKAXQ3QENKKK7SJT2YYVNAKA)
 ### Teste 2
-![Teste 2 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste2_1.jpg?token=GHSAT0AAAAAABV7A53AUIAHGEW5KXIWLO4GYYVCV4A)
-![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste2_2.jpg?token=GHSAT0AAAAAABV7A53ANCVME2A7YZTLQPXOYYVCV3A)
+![Teste 2 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste2_1.jpg?token=GHSAT0AAAAAABV7A53BXG64574MRMCWTVMCYYVNARQ)
+![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste2_2.jpg?token=GHSAT0AAAAAABV7A53B6FQ26J5OBUU23NBYYYVNCRQ)
 ### Teste 3
-![Teste 1 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste3_1.jpg?token=GHSAT0AAAAAABV7A53ARUWFRY262BAX5WNEYYVCWRA)
-![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste3_2.jpg?token=GHSAT0AAAAAABV7A53AQH7GCUU7NBVHNVDCYYVCWTA)
+![Teste 1 - Temperatura](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste3_1.jpg?token=GHSAT0AAAAAABV7A53A75XC4LFVHRVVDITMYYVNCYQ)
+![Teste 1 - Sinal Controle](https://raw.githubusercontent.com/lucasgbezerra/FSE_T2/main/assets/teste3_2.jpg?token=GHSAT0AAAAAABV7A53B7P4SYSFA3RBXSZ46YYVNDCA)
