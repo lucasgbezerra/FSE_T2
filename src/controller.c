@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <signal.h>
 #include <sys/time.h>
+#include <stdlib.h>
 
 #include "modbus.h"
 #include "controller.h"
@@ -54,6 +55,7 @@ void read_commands()
     int error = read_mensage(LE_COMANDO, &command);
     if (error != FAIL && command != 0)
     {
+
         command_handle(command);
     }
 }
@@ -112,6 +114,7 @@ void command_handle(int command)
             printf("Iniciando...");
             data = FUNCIONANDO;
             is_start = TRUE;
+
             is_waiting = FALSE;
             is_heating = TRUE;
             write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
@@ -123,6 +126,7 @@ void command_handle(int command)
             data = PARADO;
             is_start = FALSE;
             init_countdown = FALSE;
+
             is_waiting = TRUE;
             is_heating = FALSE;
             is_cooling = FALSE;
@@ -144,9 +148,9 @@ void command_handle(int command)
             printf("Tempo: %d\n", timer);
             break;
         case MENU:
+            is_menu = TRUE;
             if (is_start)
                 break;
-            is_menu = TRUE;
             int idx = menu_controller(&menu);
             ref_temperature = menu.temperatures[idx];
             timer = menu.times[idx];
@@ -184,7 +188,7 @@ void cool_down()
 {
     printf("Resfriando...");
     float room_temperature = get_temperature();
-    while (internal_temperature > room_temperature)
+    while (internal_temperature > room_temperature + 0.5)
     {
         request_temperatures();
         room_temperature = get_temperature();
@@ -201,7 +205,6 @@ void cool_down()
     write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
     write_mensage(ENVIA_TEMPORIZADOR, &timer);
     printf("OK\n");
-
 }
 
 void finish_pwm()
@@ -230,7 +233,6 @@ void show_lcd(int time_sec)
 
     int minutes = (timer * 60 - time_sec) / 60;
     int seconds = (timer * 60 - time_sec) % 60;
-
     if (is_menu)
         return;
 
@@ -289,6 +291,7 @@ void temperature_controller()
     if (is_heating && !init_countdown && compare_temperature(internal_temperature, ref_temperature))
     {
         init_countdown = TRUE;
+
         printf("Temperatura alcançada %.2f\n", internal_temperature);
     }
     pid_atualiza_referencia(ref_temperature);
@@ -308,9 +311,10 @@ void temperature_controller()
         {
             signal_temperature = FAN_MIN_LIMIT;
         }
+
         control_actuators(-signal_temperature, 0);
     }
-    printf("SIGNAL: %.2lf\n", signal_temperature);
+    printf("Temperatura Interna: %.2lf\n", internal_temperature);
 }
 
 void setup_gpio()
