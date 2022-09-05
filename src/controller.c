@@ -26,6 +26,7 @@ int init_countdown = FALSE;
 int is_waiting = FALSE;
 int is_heating = FALSE;
 int is_cooling = FALSE;
+int is_menu = FALSE;
 int timer = 0;
 
 st_menu menu;
@@ -44,7 +45,6 @@ void main_controller()
         }
     }
     pthread_join(thread_timer, (void **)&(ptr));
-    // printf("saiu do loop\n");
 }
 
 void read_commands()
@@ -54,7 +54,6 @@ void read_commands()
     int error = read_mensage(LE_COMANDO, &command);
     if (error != FAIL && command != 0)
     {
-        // printf("Comando: %d\n", command);
         command_handle(command);
     }
 }
@@ -113,7 +112,6 @@ void command_handle(int command)
             printf("Iniciando...");
             data = FUNCIONANDO;
             is_start = TRUE;
-            // preheat = TRUE;
             is_waiting = FALSE;
             is_heating = TRUE;
             write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
@@ -125,7 +123,6 @@ void command_handle(int command)
             data = PARADO;
             is_start = FALSE;
             init_countdown = FALSE;
-            // preheat = FALSE;
             is_waiting = TRUE;
             is_heating = FALSE;
             is_cooling = FALSE;
@@ -149,6 +146,7 @@ void command_handle(int command)
         case MENU:
             if (is_start)
                 break;
+            is_menu = TRUE;
             int idx = menu_controller(&menu);
             ref_temperature = menu.temperatures[idx];
             timer = menu.times[idx];
@@ -156,6 +154,7 @@ void command_handle(int command)
             write_mensage(ENVIA_SINAL_REF, &ref_temperature);
             write_mensage(ENVIA_TEMPORIZADOR, &timer);
             printf("Opção: %s\n", menu.options[menu.current]);
+            is_menu = FALSE;
             break;
         default:
             break;
@@ -183,7 +182,7 @@ void control_actuators(int fan, float resistor)
 
 void cool_down()
 {
-    printf("Resfriando...\n");
+    printf("Resfriando...");
     float room_temperature = get_temperature();
     while (internal_temperature > room_temperature)
     {
@@ -201,6 +200,8 @@ void cool_down()
     is_cooling = FALSE;
     write_mensage(ENVIA_ESTADO_FUNCIONAMENTO, &data);
     write_mensage(ENVIA_TEMPORIZADOR, &timer);
+    printf("OK\n");
+
 }
 
 void finish_pwm()
@@ -224,11 +225,14 @@ void stop()
 
 void show_lcd(int time_sec)
 {
-    char first_line[17];
-    char second_line[17];
+    char first_line[16];
+    char second_line[16];
 
     int minutes = (timer * 60 - time_sec) / 60;
     int seconds = (timer * 60 - time_sec) % 60;
+
+    if (is_menu)
+        return;
 
     if (is_start && is_heating && !init_countdown)
     {
@@ -275,7 +279,6 @@ void temperature_controller()
     if (!is_start)
         return;
 
-    // request_temperatures();
     if (!is_heating)
     {
         cool_down(get_temperature());
@@ -283,11 +286,9 @@ void temperature_controller()
         return;
     }
 
-    // if (preheat && compare_temperature(internal_temperature, ref_temperature))
     if (is_heating && !init_countdown && compare_temperature(internal_temperature, ref_temperature))
     {
         init_countdown = TRUE;
-        // preheat = FALSE;
         printf("Temperatura alcançada %.2f\n", internal_temperature);
     }
     pid_atualiza_referencia(ref_temperature);
@@ -298,8 +299,7 @@ void temperature_controller()
 
     if (signal_temperature >= 0)
     {
-        // softPwmWrite(RESISTOR_PIN, signal_temperature);
-        // softPwmWrite(FAN_PIN, 0);
+
         control_actuators(0, signal_temperature);
     }
     else
@@ -308,12 +308,9 @@ void temperature_controller()
         {
             signal_temperature = FAN_MIN_LIMIT;
         }
-        // softPwmWrite(FAN_PIN, -signal_temperature);
-        // softPwmWrite(RESISTOR_PIN, 0);
         control_actuators(-signal_temperature, 0);
     }
     printf("SIGNAL: %.2lf\n", signal_temperature);
-    // write_mensage(ENVIA_SINAL_CONTROLE, &control_signal);
 }
 
 void setup_gpio()
@@ -367,9 +364,7 @@ void exit_thread()
 }
 void sigintHandler(int sig_num)
 {
-    // signal(SIGINT, sigintHandler);
     pthread_kill(thread_timer, SIGUSR1);
     stop();
-    printf("KILL: %d\n", sig_num);
     exit(0);
 }

@@ -1,6 +1,6 @@
 #include "control_lcd.h"
 
-int fd = -1; // seen by all subroutines
+int fd = -1;
 
 void lcd_type_float(float myFloat)
 {
@@ -32,10 +32,8 @@ void lcd_type_char(char val)
     lcd_byte(val, LCD_CHR);
 }
 
-// this allows use of any size string
 void lcd_type_ln(const char *s)
 {
-
     while (*s)
         lcd_byte(*(s++), LCD_CHR);
 }

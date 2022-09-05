@@ -16,21 +16,21 @@ void write_serial(unsigned char *tx_buffer, int size)
 int read_serial(unsigned char *rx_buffer, int size_buffer)
 {
     if (fid == -1){
-        printf("FID -1\n");
+        printf("Não foi possível se comunicar coma UART\n");
         return -1;
     }
     int size = read(fid, rx_buffer, size_buffer);
 
     return size;
 }
-void open_serial()
+int open_serial()
 {
     fid = open("/dev/serial0", O_RDWR | O_NOCTTY | O_NDELAY);
 
     if (fid == -1)
     {
         printf("Erro - Não foi possível iniciar a UART.\n");
-        // return -1;
+        return -1;
     }
 
     printf("UART inicializada!\n");
@@ -44,7 +44,7 @@ void open_serial()
     tcflush(fid, TCIFLUSH);
     tcsetattr(fid, TCSANOW, &options);
 
-    // return fid;
+    return fid;
 }
 
 void close_serial(){
