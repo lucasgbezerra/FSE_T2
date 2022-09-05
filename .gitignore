@@ -1,9 +1,10 @@
 # Docs
 anotacoes.md
 
-# Folders
-bin/**
-obj/**
+# Objetos
+obj/*.o
+# Binarios
+bin/*.o
 
-rasp44
-rasp44.pub
+# VS code
+.vscode
