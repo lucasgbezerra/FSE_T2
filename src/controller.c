@@ -148,9 +148,9 @@ void command_handle(int command)
             printf("Tempo: %d\n", timer);
             break;
         case MENU:
-            is_menu = TRUE;
             if (is_start)
                 break;
+            is_menu = TRUE;
             int idx = menu_controller(&menu);
             ref_temperature = menu.temperatures[idx];
             timer = menu.times[idx];
